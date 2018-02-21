@@ -83,15 +83,15 @@ object TestWrite {
     val sqlContext = session.sqlContext
 
 
-    // read from a JSON text file into a dataset (dataframe)
-    //val dataset = sqlContext.read.json(filename)
-    val dataset = sqlContext.read.text(filename)
+    // read from a JSON text file into a dataframe dataset
+    val dataset = sqlContext.read.json(filename)
     dataset.show(5)
 
-    // read from a JSON text file
+    // read from a JSON text file into a text datasets
     //val dataset = context.textFile(filename)
     //val count = dataset.count()
     //dataset.collect().foreach(println)
+
 
 
     // read from cosmosdb
@@ -112,6 +112,7 @@ object TestWrite {
 
   def deleteDatabase(client: DocumentClient, databaseName: String): Unit = {
     client.deleteDatabase("/dbs/" + databaseName, null);
+    log(String.format("Deleted database %s", databaseName))
   }
 
   @throws[DocumentClientException]
@@ -129,7 +130,7 @@ object TestWrite {
           val database = new Database
           database.setId(databaseName)
           client.createDatabase(database, null)
-          log(String.format("Created %s", databaseName))
+          log(String.format("Created database %s", databaseName))
         }
         else throw de
     }
