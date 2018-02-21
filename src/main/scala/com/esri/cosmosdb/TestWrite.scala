@@ -99,6 +99,10 @@ object TestWrite {
     // Write to cosmosdb
     writeRDDToCosmosDB(session, dataset, SaveMode.Ignore)
     //writeDatasetToCosmosDB(session, dataset, SaveMode.Ignore)
+
+    
+    // query count
+    queryCount(client, DATABASE_NAME, COLLECTION_NAME)
   }
 
   def deleteDatabase(client: DocumentClient, databaseName: String): Unit = {
@@ -158,17 +162,17 @@ object TestWrite {
     }
   }
 
-  def executeSimpleQuery(client: DocumentClient, databaseName: String, collectionName: String): Unit = {
+  def queryCount(client: DocumentClient, databaseName: String, collectionName: String): Unit = {
     // set some common query options
     val queryOptions = new FeedOptions
     queryOptions.setPageSize(-1)
     queryOptions.setEnableCrossPartitionQuery(true)
     val collectionLink = String.format("/dbs/%s/colls/%s", databaseName, collectionName)
-    val queryResults = client.queryDocuments(collectionLink, "SELECT * FROM Family WHERE Family.lastName = 'Andersen'", queryOptions)
     log("Running SQL query...")
+    val queryResults = client.queryDocuments(collectionLink, "SELECT COUNT(PlanesCollection.id) FROM PlanesCollection", queryOptions)
     import scala.collection.JavaConversions._
-    for (family <- queryResults.getQueryIterable) {
-      log(String.format("\tRead %s", family))
+    for (result <- queryResults.getQueryIterable) {
+      log(String.format("\tRead %s", result))
     }
   }
 
