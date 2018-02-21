@@ -18,7 +18,7 @@ object TestWrite {
 
   // java -cp target/estest.jar org.jennings.estest.SendFileElasticsearchFile
 
-  private val DEFAULT_FILENAME = "C:\\Projects\\CosmosDB\\Data\\planes-small.json"
+  private val DEFAULT_FILENAME = "c:\\GitHub\\test-cosmos-db-spark\\data\\planes-small.json"
   private val DEFAULT_SPARK_MASTER = "local[8]"
 
   private val SERVICE_ENDPOINT = "https://a4iot-cosmos-db-sql.documents.azure.com:443/"
@@ -56,15 +56,17 @@ object TestWrite {
 
     // deleting the DB
     deleteDatabase(client, DATABASE_NAME)
-    Thread.sleep(5000)
+    Thread.sleep(1000)
 
 
     // recreate the DB and collection
     createDatabase(client, DATABASE_NAME)
     createDocumentCollection(client, DATABASE_NAME, COLLECTION_NAME)
-    Thread.sleep(5000)
+    Thread.sleep(1000)
 
-    client.close()
+
+    // count
+    queryCount(client, DATABASE_NAME, COLLECTION_NAME, "before")
 
 
     log("Sending " + filename + " to " + SERVICE_ENDPOINT + " using " + sparkMaster)
@@ -81,14 +83,14 @@ object TestWrite {
     val sqlContext = session.sqlContext
 
 
-    // read from a JSON text file into a dataset
+    // read from a JSON text file into a dataset (dataframe)
     //val dataset = sqlContext.read.json(filename)
-    //val dataset = sqlContext.read.text(filename)
-    //dataset.show(127)
+    val dataset = sqlContext.read.text(filename)
+    dataset.show(5)
 
     // read from a JSON text file
-    val dataset = context.textFile(filename)
-    val count = dataset.count()
+    //val dataset = context.textFile(filename)
+    //val count = dataset.count()
     //dataset.collect().foreach(println)
 
 
@@ -97,12 +99,15 @@ object TestWrite {
 
 
     // Write to cosmosdb
-    writeRDDToCosmosDB(session, dataset, SaveMode.Ignore)
-    //writeDatasetToCosmosDB(session, dataset, SaveMode.Ignore)
+    //writeRDDToCosmosDB(session, dataset, SaveMode.Ignore)
+    writeDatasetToCosmosDB(session, dataset, SaveMode.Ignore)
 
-    
-    // query count
-    queryCount(client, DATABASE_NAME, COLLECTION_NAME)
+
+    // count
+    queryCount(client, DATABASE_NAME, COLLECTION_NAME, "after")
+
+
+    //client.close()
   }
 
   def deleteDatabase(client: DocumentClient, databaseName: String): Unit = {
@@ -162,7 +167,7 @@ object TestWrite {
     }
   }
 
-  def queryCount(client: DocumentClient, databaseName: String, collectionName: String): Unit = {
+  def queryCount(client: DocumentClient, databaseName: String, collectionName: String, caption: String): Unit = {
     // set some common query options
     val queryOptions = new FeedOptions
     queryOptions.setPageSize(-1)
@@ -172,7 +177,7 @@ object TestWrite {
     val queryResults = client.queryDocuments(collectionLink, "SELECT COUNT(PlanesCollection.id) FROM PlanesCollection", queryOptions)
     import scala.collection.JavaConversions._
     for (result <- queryResults.getQueryIterable) {
-      log(String.format("\tRead %s", result))
+      log(String.format("(count %s): %s", caption, result))
     }
   }
 
