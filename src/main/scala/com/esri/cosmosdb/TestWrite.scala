@@ -8,7 +8,7 @@ import com.microsoft.azure.cosmosdb.spark.schema._
 import com.microsoft.azure.documentdb._
 import org.apache.commons.lang.StringUtils
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Dataset, SQLContext, SaveMode, SparkSession}
+import org.apache.spark.sql.{Dataset, SaveMode, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 
 
@@ -31,6 +31,7 @@ object TestWrite {
   //private val READ_QUERY = "SELECT c.date, c.delay, c.distance, c.origin, c.destination FROM c WHERE c.origin = 'SEA'"
   private val READ_QUERY = "SELECT * FROM c"
 
+  private val FIRST_DOC_ID_TO_WRITE = 1000001
   private val NUM_OF_DOCS_TO_WRITE = 1000
   private val RUs = 400
 
@@ -91,7 +92,6 @@ object TestWrite {
     //val dataset = context.textFile(filename)
     //val count = dataset.count()
     //dataset.collect().foreach(println)
-
 
 
     // read from cosmosdb
@@ -260,6 +260,33 @@ object TestWrite {
       builder.config("spark.sql.warehouse.dir", s"file:///${System.getProperty("user.dir")}")
     }
     builder.getOrCreate()
+  }
+
+  @throws[DocumentClientException]
+  @throws[IOException]
+  private def writeNoSpark(client: DocumentClient, firstId: Long = FIRST_DOC_ID_TO_WRITE, numOfDocs: Long = NUM_OF_DOCS_TO_WRITE): Unit = {
+    val collectionLink = String.format("/dbs/%s/colls/%s", DATABASE_NAME, COLLECTION_NAME)
+    val lastId = firstId + numOfDocs
+    var id = firstId
+    log(String.format("writing %s documents from %s to %s ...", numOfDocs.toString, firstId.toString, lastId.toString))
+    val initialPlane = Plane.createPlane
+    val stopper = new Stopper
+    while (id < firstId + NUM_OF_DOCS_TO_WRITE) {
+      val plane = initialPlane.withId(String.format("%s", id.toString))
+      val response = writePlane(client, collectionLink, plane)
+      id += 1
+    }
+    stopper.logTime(String.format("writing %s documents done - ", numOfDocs.toString))
+  }
+
+
+  private def writePlane(client: DocumentClient, collectionLink: String, plane: Plane): ResourceResponse[Document] = {
+    try {
+      client.createDocument(collectionLink, plane, new RequestOptions, true)
+    } catch {
+      case ex: Throwable =>
+        null
+    }
   }
 
   @throws[IOException]

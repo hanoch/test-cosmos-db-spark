@@ -1,6 +1,26 @@
 package com.esri.cosmosdb
 
-case class Plane (bearing: Double, dist: Double,  dest: String, lon: Double,  
+object Plane {
+  def createPlane: Plane = {
+    val plane = new Plane(
+      bearing = -70.72,
+      dist = 5024.32,
+      dest = "Frank Paris International Airport",
+      lon = -31.88592,
+      rtid = 1,
+      ts = 1506957079, // 1506957079575
+      secsToDep = -1,
+      lat = 49.21297,
+      speed = 240.25,
+      id = "0",
+      orig = "Mielec Airport")
+
+    plane
+  }
+}
+
+
+case class Plane (bearing: Double, dist: Double,  dest: String, lon: Double,
                   rtid: Int, ts: Long, secsToDep: Int,
                   lat: Double, speed: Double, id: String, orig: String) {
 /*
@@ -18,4 +38,6 @@ case class Plane (bearing: Double, dist: Double,  dest: String, lon: Double,
     "ts": 1506957079575
   }
 */
+
+  def withId(id: String) = this.copy(id = id)
 }
