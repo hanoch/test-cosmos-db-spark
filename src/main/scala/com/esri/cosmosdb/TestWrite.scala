@@ -10,6 +10,9 @@ import org.apache.commons.lang.StringUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Dataset, SaveMode, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
+import com.microsoft.azure.documentdb.PartitionKeyDefinition
+import java.util
+
 
 
 object TestWrite {
@@ -23,7 +26,7 @@ object TestWrite {
 
   private val SERVICE_ENDPOINT = "https://a4iot-cosmos-db-sql.documents.azure.com:443/"
   private val MASTER_KEY = "21c1c35SmLuI80v8PfhLKW1rfAxqDW7wwWsTTdgvyXKn6KAILSpm6vQSUjVI14oJlGoYnMKN26FUgekehx15tw=="
-  private val DATABASE_NAME = "PlanesDB"
+  private val DATABASE_NAME = "PlanesDB2"
   private val COLLECTION_NAME = "PlanesCollection"
   private val PREFERRED_REGIONS = "West US;West US2;East US"
   private val WRITING_BATCH_SIZE = "100"
@@ -33,12 +36,13 @@ object TestWrite {
 
   private val FIRST_DOC_ID_TO_WRITE = 1000001
   private val NUM_OF_DOCS_TO_WRITE = 1000
-  private val RUs = 400
+  private val RUs = 15000
 
 
   def main(args: Array[String]): Unit = {
 
     val client = new DocumentClient(SERVICE_ENDPOINT, MASTER_KEY, new ConnectionPolicy, ConsistencyLevel.Session)
+
 
     val appName = getClass.getName
 
@@ -57,13 +61,13 @@ object TestWrite {
 
     // deleting the DB
     deleteDatabase(client, DATABASE_NAME)
-    Thread.sleep(1000)
+    //Thread.sleep(1000)
 
 
     // recreate the DB and collection
     createDatabase(client, DATABASE_NAME)
     createDocumentCollection(client, DATABASE_NAME, COLLECTION_NAME)
-    Thread.sleep(1000)
+    //Thread.sleep(1000)
 
 
     // count
@@ -107,6 +111,7 @@ object TestWrite {
     queryCount(client, DATABASE_NAME, COLLECTION_NAME, "after")
 
 
+    System.exit(0)
     //client.close()
   }
 
@@ -150,6 +155,7 @@ object TestWrite {
         if (de.getStatusCode == 404) {
           val collectionInfo = new DocumentCollection
           collectionInfo.setId(collectionName)
+
           // optionally, you can configure the indexing policy of a collection.
           // Here we configure collections for maximum query flexibility including string range queries.
           val index = new RangeIndex(DataType.String)
@@ -158,7 +164,18 @@ object TestWrite {
           // DocumentDB collections can be reserved with throughput specified in request units/second.
           // 1 RU is a normalized request equivalent to the read of a 1KB document.
           // Here we create a collection with RUs (default is 400) RU/s.
+
+          val partitionKeyDefinition = new PartitionKeyDefinition
+          val paths = new util.ArrayList[String]
+          paths.add("/id")
+          partitionKeyDefinition.setPaths(paths)
+          collectionInfo.setPartitionKey(partitionKeyDefinition)
+
+
           val requestOptions = new RequestOptions
+          // Added this to try to get past RUs limit of 10,000; did not help
+          //requestOptions.setPartitionKey(new PartitionKey("/id"))
+
           requestOptions.setOfferThroughput(RUs)
           client.createCollection(databaseLink, collectionInfo, requestOptions)
           log(String.format("Created %s", collectionName))
@@ -175,7 +192,7 @@ object TestWrite {
     queryOptions.setEnableCrossPartitionQuery(true)
     val collectionLink = String.format("/dbs/%s/colls/%s", databaseName, collectionName)
     log("Running SQL query...")
-    val queryResults = client.queryDocuments(collectionLink, "SELECT COUNT(PlanesCollection.id) FROM PlanesCollection", queryOptions)
+    val queryResults = client.queryDocuments(collectionLink, "SELECT value COUNT(1) FROM PlanesCollection", queryOptions)
     import scala.collection.JavaConversions._
     for (result <- queryResults.getQueryIterable) {
       log(String.format("(count %s): %s", caption, result))
