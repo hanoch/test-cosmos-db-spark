@@ -209,7 +209,7 @@ object TestWrite {
       "Collection" -> COLLECTION_NAME,
       "WritingBatchSize" -> WRITING_BATCH_SIZE))
 
-    val stopper = Stopper()
+    val stopwatch = Stopwatch()
 
     // Write the dataframe
     //df.write.cosmosDB(writeConfig)
@@ -220,7 +220,7 @@ object TestWrite {
     // Alternatively, write from an RDD
     //df.rdd.saveToCosmosDB(writeConfig)
 
-    stopper.logTime("writeDatasetToCosmosDB - ")
+    stopwatch.logTime("writeDatasetToCosmosDB - ")
   }
 
   def writeRDDToCosmosDB(session: SparkSession, rdd: RDD[_], saveMode: SaveMode): Unit = {
@@ -233,11 +233,11 @@ object TestWrite {
       "Collection" -> COLLECTION_NAME,
       "WritingBatchSize" -> WRITING_BATCH_SIZE))
 
-    val stopper: Stopper = Stopper()
+    val stopwatch: Stopwatch = Stopwatch()
 
     rdd.saveToCosmosDB(writeConfig)
 
-    stopper.logTime("writeRDDToCosmosDB - ")
+    stopwatch.logTime("writeRDDToCosmosDB - ")
 
   }
 
@@ -253,7 +253,7 @@ object TestWrite {
       "query_custom" -> READ_QUERY))
 
 
-    val stopper: Stopper = Stopper()
+    val stopwatch: Stopwatch = Stopwatch()
 
     val sqlContext = session.sqlContext
     val coll = sqlContext.read.cosmosDB(readConfig)
@@ -266,7 +266,7 @@ object TestWrite {
     // Run DF query (count)
     val count = df.count()
 
-    stopper.logTime("readFromCosmosDB - count: " + count + " - ")
+    stopwatch.logTime("readFromCosmosDB - count: " + count + " - ")
   }
 
   def createOrGetDefaultSparkSession(sc: SparkContext): SparkSession = {
@@ -287,13 +287,13 @@ object TestWrite {
     var id = firstId
     log(String.format("writing %s documents from %s to %s ...", numOfDocs.toString, firstId.toString, lastId.toString))
     val initialPlane = Plane.createPlane
-    val stopper = new Stopper
+    val stopwatch = new Stopwatch
     while (id < firstId + NUM_OF_DOCS_TO_WRITE) {
       val plane = initialPlane.withId(String.format("%s", id.toString))
       val response = writePlane(client, collectionLink, plane)
       id += 1
     }
-    stopper.logTime(String.format("writing %s documents done - ", numOfDocs.toString))
+    stopwatch.logTime(String.format("writing %s documents done - ", numOfDocs.toString))
   }
 
 
