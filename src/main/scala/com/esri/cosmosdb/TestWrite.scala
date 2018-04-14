@@ -14,19 +14,19 @@ import com.microsoft.azure.documentdb.PartitionKeyDefinition
 import java.util
 
 
-
+// see also - https://devtopia.esri.com/WebGIS/real-time-gis/issues/908
 object TestWrite {
 
   // spark-submit --class org.jennings.estest.SendFileElasticsearch target/estest.jar planes00001 a1 9200 local[16] planes/planes
 
   // java -cp target/estest.jar org.jennings.estest.SendFileElasticsearchFile
 
-  private val DEFAULT_FILENAME = "c:\\GitHub\\test-cosmos-db-spark\\data\\planes-small.json"
-  private val DEFAULT_SPARK_MASTER = "local[8]"
+  private val DEFAULT_FILENAME = """c:\GitHub\hanoch\test-cosmos-db-spark\data\planes-string-guid-30K.json"""
+  private val DEFAULT_SPARK_MASTER = "local[128]"
 
   private val SERVICE_ENDPOINT = "https://a4iot-cosmos-db-sql.documents.azure.com:443/"
   private val MASTER_KEY = "21c1c35SmLuI80v8PfhLKW1rfAxqDW7wwWsTTdgvyXKn6KAILSpm6vQSUjVI14oJlGoYnMKN26FUgekehx15tw=="
-  private val DATABASE_NAME = "PlanesDB2"
+  private val DATABASE_NAME = "PlanesDB"
   private val COLLECTION_NAME = "PlanesCollection"
   private val PREFERRED_REGIONS = "West US;West US2;East US"
   private val WRITING_BATCH_SIZE = "100"
@@ -41,33 +41,31 @@ object TestWrite {
 
   def main(args: Array[String]): Unit = {
 
-    val client = new DocumentClient(SERVICE_ENDPOINT, MASTER_KEY, new ConnectionPolicy, ConsistencyLevel.Session)
-
-
     val appName = getClass.getName
 
+    //val Array(filename, sparkMaster) = args
     val numargs = args.length
     if (numargs > 2) {
       System.err.println("Usage: TestWrite Filename SparkMaster")
       System.err.println("        Filename: Json File to Process")
-      System.err.println("        SparkMaster: Spark Master (e.g. local[8] or - to use default)")
+      System.err.println("        SparkMaster: Spark Master (e.g. local[128] or - to use default)")
+      //TODO - add other params - SERVICE_ENDPOINT, MASTER_KEY, DATABASE_NAME, COLLECTION_NAME, PREFERRED_REGIONS, etc.
       System.exit(1)
     }
 
-    //val Array(filename, sparkMaster) = args
+    val client = new DocumentClient(SERVICE_ENDPOINT, MASTER_KEY, new ConnectionPolicy, ConsistencyLevel.Session)
+
     val filename = if (numargs > 0) args(0) else DEFAULT_FILENAME
     val sparkMaster = if (numargs > 1) args(1) else DEFAULT_SPARK_MASTER
 
 
-    // deleting the DB
+    // delete the DB
     deleteDatabase(client, DATABASE_NAME)
-    //Thread.sleep(1000)
 
 
     // recreate the DB and collection
     createDatabase(client, DATABASE_NAME)
     createDocumentCollection(client, DATABASE_NAME, COLLECTION_NAME)
-    //Thread.sleep(1000)
 
 
     // count
@@ -112,7 +110,6 @@ object TestWrite {
 
 
     System.exit(0)
-    //client.close()
   }
 
   def deleteDatabase(client: DocumentClient, databaseName: String): Unit = {
